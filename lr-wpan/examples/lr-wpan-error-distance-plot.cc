@@ -1,28 +1,3 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
-/*
- * Copyright (c) 2011 The Boeing Company
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Author: Tom Henderson <thomas.r.henderson@boeing.com>
- */
-
-// This program produces a gnuplot file that plots the packet success rate
-// as a function of distance for the 802.15.4 models, assuming a default
-// LogDistance propagation loss model, the 2.4 GHz OQPSK error model, a
-// default transmit power of 0 dBm, and a default packet size of 20 bytes of
-// 802.15.4 payload.
 #include <ns3/test.h>
 #include <ns3/log.h>
 #include <ns3/callback.h>
@@ -53,15 +28,16 @@
 
 using namespace ns3;
 using namespace std;
-
-static uint32_t g_received = 0;
+int sender=0;
+static uint32_t g_received[1000] = {0};
 
 NS_LOG_COMPONENT_DEFINE ("LrWpanErrorDistancePlot");
 
 static void
 LrWpanErrorDistanceCallback (McpsDataIndicationParams params, Ptr<Packet> p)
 {
-  g_received++;
+  g_received[sender]++;
+	cout << "Sender: " << sender << endl;
 }
 
 int main (int argc, char *argv[])
@@ -70,12 +46,13 @@ int main (int argc, char *argv[])
   std::ofstream berfile ("802.15.4-psr-distance.plt");
 
   int minDistance = 1;
-  int maxDistance = 200;  // meters
-  int increment = 1;
-  int maxPackets = 1000;
+  int maxDistance = 10;  // meters
+//  int increment = 1;
+//  int maxPackets = 1000;
   int packetSize = 20;
   double txPower = 0;
   uint32_t channelNumber = 11;
+	int nSenders = 2;
 
   CommandLine cmd;
 
@@ -90,73 +67,164 @@ int main (int argc, char *argv[])
   Gnuplot psrplot = Gnuplot ("802.15.4-psr-distance.eps");
   Gnuplot2dDataset psrdataset ("802.15.4-psr-vs-distance");
 
-  Ptr<Node> n0 = CreateObject <Node> ();
-  Ptr<Node> n1 = CreateObject <Node> ();
-  Ptr<LrWpanNetDevice> dev0 = CreateObject<LrWpanNetDevice> ();
-  Ptr<LrWpanNetDevice> dev1 = CreateObject<LrWpanNetDevice> ();
-  dev0->SetAddress (Mac16Address ("00:01"));
-  dev1->SetAddress (Mac16Address ("00:02"));
+// -------------------------------------- //
+	Ptr<Node> node_obj[nSenders + 1];
+	for(int i = 0; i < nSenders + 1; i++)
+	{
+  	node_obj[i] = CreateObject <Node> ();
+	}
+  
+// -------------------------------------- //
+	Ptr<LrWpanNetDevice> net_dev[nSenders + 1];
+	for(int i = 0; i < nSenders+1; i++)
+	{
+		net_dev[i] = CreateObject<LrWpanNetDevice> ();
+	}
+
+// -------------------------------------- //
+	int k = 0;
+	for(int i = 0; i < ((nSenders+1) / 256) + 1; i++)
+	{
+		int n = 0;
+		if (i == (nSenders+1) / 256)
+			n = (nSenders+1) % 256;
+		else
+			n = 256;
+
+		for(int j = 0; j < n; j++)
+		{
+			char* macAddress = new char[to_string(i).length() + to_string(j).length()];
+			sprintf(macAddress, "%02X:%02X", i, j);
+				net_dev[k]->SetAddress (Mac16Address (macAddress));
+			k = k + 1;
+		}
+	}
+
+// -------------------------------------- //
   Ptr<MultiModelSpectrumChannel> channel = CreateObject<MultiModelSpectrumChannel> ();
   Ptr<LogDistancePropagationLossModel> model = CreateObject<LogDistancePropagationLossModel> ();
   channel->AddPropagationLossModel (model);
-  dev0->SetChannel (channel);
-  dev1->SetChannel (channel);
-  n0->AddDevice (dev0);
-  n1->AddDevice (dev1);
-  Ptr<ConstantPositionMobilityModel> mob0 = CreateObject<ConstantPositionMobilityModel> ();
-  dev0->GetPhy ()->SetMobility (mob0);
-  Ptr<ConstantPositionMobilityModel> mob1 = CreateObject<ConstantPositionMobilityModel> ();
-  dev1->GetPhy ()->SetMobility (mob1);
+	for(int i = 0 ; i < nSenders + 1; i++)
+	{	
+		net_dev[i]->SetChannel (channel);
+  	node_obj[i]->AddDevice (net_dev[i]);
+	}
 
+// -------------------------------------- //
+	Ptr<ConstantPositionMobilityModel> senderMobility[nSenders + 1];
+	int x[nSenders + 1];
+	int y[nSenders + 1];
+	int z[nSenders + 1];
+	
+	for(int i = 0; i < nSenders + 1; i++)
+	{
+		senderMobility[i] = CreateObject<ConstantPositionMobilityModel> ();
+		x[i] = rand() % maxDistance + minDistance;
+		y[i] = rand() % maxDistance + minDistance;
+		z[i] = rand() % maxDistance + minDistance;
+  	
+		senderMobility[i]->SetPosition (Vector (x[i], y[i], z[i]));
+   	net_dev[i]->GetPhy ()->SetMobility (senderMobility[i]);
+	}
   LrWpanSpectrumValueHelper svh;
-  Ptr<SpectrumValue> psd = svh.CreateTxPowerSpectralDensity (txPower, channelNumber);
-  dev0->GetPhy ()->SetTxPowerSpectralDensity (psd);
+  Ptr<SpectrumValue> psd[nSenders+1];
+	for(int i = 0; i < nSenders+1; i++)
+	{
+		psd[i] = svh.CreateTxPowerSpectralDensity (txPower, channelNumber);
+ 		net_dev[i]->GetPhy ()->SetTxPowerSpectralDensity (psd[i]);
+	}
 
-  McpsDataIndicationCallback cb0;
-  cb0 = MakeCallback (&LrWpanErrorDistanceCallback);
-  dev1->GetMac ()->SetMcpsDataIndicationCallback (cb0);
+//  dev0->GetPhy ()->SetTxPowerSpectralDensity (psd);
+
+//	McpsDataConfirmCallback cbc[nSenders + 1];
+//	McpsDataIndicationCallback cbi[nSenders + 1];
+	McpsDataIndicationCallback cbe[nSenders + 1];
+	cbe[1] = MakeCallback (&LrWpanErrorDistanceCallback);
+	net_dev[0]->GetMac ()->SetMcpsDataIndicationCallback (cbe[1]);
+
+//	for(int i = 0; i < nSenders + 1; i++)
+//	{
+		//sender = i;
+//  	cbc[i] = MakeCallback (&DataConfirm);
+//  	net_dev[i]->GetMac ()->SetMcpsDataConfirmCallback (cbc[i]);
+//		cbe[i] = MakeCallback (&LrWpanErrorDistanceCallback);
+//  	net_dev[i]->GetMac ()->SetMcpsDataIndicationCallback (cbe[i]);
+//  	cbi[i] = MakeCallback (&DataIndication);
+//  	net_dev[i]->GetMac ()->SetMcpsDataIndicationCallback (cbi[i]);
+//	}
+//  McpsDataIndicationCallback cb0;
+//  cb0 = MakeCallback (&LrWpanErrorDistanceCallback);
+//  dev1->GetMac ()->SetMcpsDataIndicationCallback (cb0);
 
   McpsDataRequestParams params;
   params.m_srcAddrMode = SHORT_ADDR;
   params.m_dstAddrMode = SHORT_ADDR;
   params.m_dstPanId = 0;
-  params.m_dstAddr = Mac16Address ("00:02");
+  params.m_dstAddr = Mac16Address ("00:00");
   params.m_msduHandle = 0;
   params.m_txOptions = 0;
 
-  Ptr<Packet> p;
-  mob0->SetPosition (Vector (0,0,0));
-  mob1->SetPosition (Vector (minDistance,0,0));
-  for (int j = minDistance; j < maxDistance;  )
-    {
-      for (int i = 0; i < maxPackets; i++)
-        {
-          p = Create<Packet> (packetSize);
-          Simulator::Schedule (Seconds (i),
-                               &LrWpanMac::McpsDataRequest,
-                               dev0->GetMac (), params, p);
-        }
-      Simulator::Run ();
-      NS_LOG_DEBUG ("Received " << g_received << " packets for distance " << j);
-      psrdataset.Add (j, g_received / 1000.0);
-      g_received = 0;
-      j += increment;
-      mob1->SetPosition (Vector (j,0,0));
-    }
+//	McpsDataRequestParams params[nSenders+1];
+//// Destination setting to Node 0
+//	int i = 0, j = 0;
+//	char* dstMacAddress = new char[to_string(i).length() + to_string(j).length()];
+//	sprintf(dstMacAddress, "%02X:%02X", i, j);
+	
+//  for(int i = 0 ; i < nSenders; i++)
+//	{
+//      params[i].m_srcAddrMode = SHORT_ADDR;
+//		params[i].m_dstPanId = 0;
+//      params[i].m_dstAddrMode = SHORT_ADDR;
+//      params[i].m_dstAddr = Mac16Address ("00:00");
+//  	params[i].m_msduHandle = 0;
+//  	params[i].m_txOptions = 0;//TX_OPTION_ACK;
+//	}
+//  McpsDataRequestParams params;
+//  params.m_srcAddrMode = SHORT_ADDR;
+//  params.m_dstAddrMode = SHORT_ADDR;
+//  params.m_dstPanId = 0;
+//  params.m_dstAddr = Mac16Address ("00:00");
+//  params.m_msduHandle = 0;
+//  params.m_txOptions = 0;
 
-  psrplot.AddDataset (psrdataset);
+  Ptr<Packet> p1;
+	for(int i = 1; i < nSenders + 1; i++)
+	{
+		sender = 0;
+		cout << "I: " << i << endl;
+	 	for(int j = 0; j < 2; j++)
+		{
+			p1 = Create<Packet> (packetSize);
+  		Simulator::Schedule (Seconds (0.0),
+                                  &LrWpanMac::McpsDataRequest,
+                                  net_dev[i]->GetMac (), params, p1);
+		}
+	}
 
-  psrplot.SetTitle (os.str ());
-  psrplot.SetTerminal ("postscript eps color enh \"Times-BoldItalic\"");
-  psrplot.SetLegend ("distance (m)", "Packet Success Rate (PSR)");
-  psrplot.SetExtra  ("set xrange [0:200]\n\
-set yrange [0:1]\n\
-set grid\n\
-set style line 1 linewidth 5\n\
-set style increment user");
-  psrplot.GenerateOutput (berfile);
-  berfile.close ();
-
+  	Simulator::Run ();
+		NS_LOG_UNCOND(g_received[0] << " received");
+//  mob0->SetPosition (Vector (0,0,0));
+//  mob1->SetPosition (Vector (minDistance,0,0));
+//  for (int j = minDistance; j < maxDistance;  )
+//    {
+//      for (int i = 0; i < maxPackets; i++)
+//        {
+//          p = Create<Packet> (packetSize);
+//          Simulator::Schedule (Seconds (i),
+//                               &LrWpanMac::McpsDataRequest,
+//                               dev0->GetMac (), params, p);
+//        }
+//      Simulator::Run ();
+//      NS_LOG_UNCOND ("Received " << g_received << " packets for distance " << j);
+//      psrdataset.Add (j, g_received / 1000.0);
+//			cout << "Test: " << g_received << endl;
+//      g_received = 0;
+//			if (j == 1)
+//				break;
+//      j += increment;
+//      mob1->SetPosition (Vector (j,0,0));
+//    }
+//
   Simulator::Destroy ();
   return 0;
 }

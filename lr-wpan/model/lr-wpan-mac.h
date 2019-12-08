@@ -151,7 +151,8 @@ struct McpsDataRequestParams
       m_dstPanId (0),
       m_dstAddr (),
       m_msduHandle (0),
-      m_txOptions (0)
+      m_txOptions (0),
+			m_Sender(0)
   {
   }
   LrWpanAddressMode m_srcAddrMode; //!< Source address mode
@@ -161,6 +162,7 @@ struct McpsDataRequestParams
   Mac64Address m_dstExtAddr;       //!< Destination extended address
   uint8_t m_msduHandle;            //!< MSDU handle
   uint8_t m_txOptions;             //!< Tx Options (bitfield)
+	int m_Sender;
 };
 
 /**
@@ -172,6 +174,7 @@ struct McpsDataConfirmParams
 {
   uint8_t m_msduHandle; //!< MSDU handle
   LrWpanMcpsDataConfirmStatus m_status; //!< The status of the last MSDU transmission
+	int m_Sender;
 };
 
 /**
