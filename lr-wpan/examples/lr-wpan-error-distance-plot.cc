@@ -37,7 +37,6 @@ static void
 LrWpanErrorDistanceCallback (McpsDataIndicationParams params, Ptr<Packet> p)
 {
   g_received[sender]++;
-	cout << "Sender: " << sender << endl;
 }
 
 int main (int argc, char *argv[])
@@ -46,10 +45,9 @@ int main (int argc, char *argv[])
   std::ofstream berfile ("802.15.4-psr-distance.plt");
 
   int minDistance = 1;
-  int maxDistance = 10;  // meters
-//  int increment = 1;
-//  int maxPackets = 1000;
-  int packetSize = 20;
+  int maxDistance = 70;  // meters
+  int maxPackets = 10;
+  int packetSize = 20;		// bytes
   double txPower = 0;
   uint32_t channelNumber = 11;
 	int nSenders = 2;
@@ -160,7 +158,7 @@ int main (int argc, char *argv[])
 	for(int i = 1; i < nSenders + 1; i++)
 	{
 		sender = 0;
-	 	for(int j = 0; j < 2; j++)
+	 	for(int j = 0; j < maxPackets; j++)
 		{
 			p1 = Create<Packet> (packetSize);
   		Simulator::Schedule (Seconds (0.0),
@@ -169,8 +167,13 @@ int main (int argc, char *argv[])
 		}
 	}
 
+// -------------------------------------- //
   Simulator::Run ();
-	NS_LOG_UNCOND(g_received[0] << " received");
+	float packetsSent = maxPackets * nSenders;
+	NS_LOG_UNCOND("Packets sent (all senders): " << packetsSent);
+	NS_LOG_UNCOND("Packets received: " << g_received[0]);
+	float packetLoss = ((packetsSent - g_received[0]) * 100.00) / packetsSent;
+	NS_LOG_UNCOND("Packet Loss: " << packetLoss << "%");
   Simulator::Destroy ();
   return 0;
 }
