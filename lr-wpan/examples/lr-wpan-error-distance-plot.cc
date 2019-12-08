@@ -28,29 +28,47 @@
 
 using namespace ns3;
 using namespace std;
-int sender=0;
-static uint32_t g_received[1000] = {0};
+static uint32_t g_received = 0;
 
 NS_LOG_COMPONENT_DEFINE ("LrWpanErrorDistancePlot");
 
-static void
-LrWpanErrorDistanceCallback (McpsDataIndicationParams params, Ptr<Packet> p)
+static void LrWpanErrorDistanceCallback (McpsDataIndicationParams params, Ptr<Packet> p)
 {
-  g_received[sender]++;
+  g_received++;
+}
+
+static void plotPacketSuccessRate(int sender, int g_received, int maxPackets, int nSenders, Gnuplot psrplot, Gnuplot2dDataset psrdataset)
+{
+  std::ostringstream os;
+  std::ofstream berfile ("802.15.4-psr-distance.plt");
+  psrplot.AddDataset (psrdataset);
+
+	psrdataset.SetStyle (Gnuplot2dDataset::POINTS); 
+  psrplot.SetTitle (os.str ());
+  psrplot.SetTerminal ("postscript eps color enh \"Times-BoldItalic\"");
+  psrplot.SetLegend ("distance (m)", "Packet Success Rate (PSR)");
+  psrplot.SetExtra  ("set xrange [0:200]\n\
+ set yrange [0:1]\n\
+ set grid\n\
+ set style line 1 linewidth 5\n\
+ set style increment user");
+  psrplot.GenerateOutput (berfile);
+  berfile.close ();
 }
 
 int main (int argc, char *argv[])
 {
   std::ostringstream os;
-  std::ofstream berfile ("802.15.4-psr-distance.plt");
+  Gnuplot psrplot = Gnuplot ("802.15.4-psr-distance.eps");
+  Gnuplot2dDataset psrdataset ("802.15.4-psr-vs-distance");
 
   int minDistance = 1;
-  int maxDistance = 70;  // meters
-  int maxPackets = 10;
+  int maxDistance = 200;  // meters
+  int maxPackets = 100;
   int packetSize = 20;		// bytes
   double txPower = 0;
   uint32_t channelNumber = 11;
-	int nSenders = 2;
+	int nSenders = 50;
 
   CommandLine cmd;
 
@@ -61,9 +79,6 @@ int main (int argc, char *argv[])
   cmd.Parse (argc, argv);
 
   os << "Packet (MSDU) size = " << packetSize << " bytes; tx power = " << txPower << " dBm; channel = " << channelNumber;
-
-  Gnuplot psrplot = Gnuplot ("802.15.4-psr-distance.eps");
-  Gnuplot2dDataset psrdataset ("802.15.4-psr-vs-distance");
 
 // -------------------------------------- //
 	Ptr<Node> node_obj[nSenders + 1];
@@ -155,9 +170,9 @@ int main (int argc, char *argv[])
 
 // -------------------------------------- //
   Ptr<Packet> p1;
+	int last_g_received = 0;
 	for(int i = 1; i < nSenders + 1; i++)
 	{
-		sender = 0;
 	 	for(int j = 0; j < maxPackets; j++)
 		{
 			p1 = Create<Packet> (packetSize);
@@ -165,16 +180,22 @@ int main (int argc, char *argv[])
                                   &LrWpanMac::McpsDataRequest,
                                   net_dev[i]->GetMac (), params, p1);
 		}
+		last_g_received = g_received;
+    Simulator::Run ();
+		psrdataset.Add (i, (g_received - last_g_received) / (1.0 * maxPackets));
 	}
 
 // -------------------------------------- //
-  Simulator::Run ();
 	float packetsSent = maxPackets * nSenders;
 	NS_LOG_UNCOND("Packets sent (all senders): " << packetsSent);
-	NS_LOG_UNCOND("Packets received: " << g_received[0]);
-	float packetLoss = ((packetsSent - g_received[0]) * 100.00) / packetsSent;
+	NS_LOG_UNCOND("Packets received: " << g_received);
+	float packetLoss = ((packetsSent - g_received) * 100.00) / packetsSent;
 	NS_LOG_UNCOND("Packet Loss: " << packetLoss << "%");
-  Simulator::Destroy ();
+
+// -------------------------------------- //
+	plotPacketSuccessRate(i, g_received, maxPackets, nSenders, psrplot, psrdataset);
+  system("gnuplot 802.15.4-psr-distance.plt");
+	Simulator::Destroy ();
   return 0;
 }
 
