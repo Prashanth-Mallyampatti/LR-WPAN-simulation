@@ -115,7 +115,6 @@ int main (int argc, char *argv[])
 	int x[nSenders + 1];
 	int y[nSenders + 1];
 	int z[nSenders + 1];
-	
 	for(int i = 0; i < nSenders + 1; i++)
 	{
 		senderMobility[i] = CreateObject<ConstantPositionMobilityModel> ();
@@ -126,6 +125,8 @@ int main (int argc, char *argv[])
 		senderMobility[i]->SetPosition (Vector (x[i], y[i], z[i]));
    	net_dev[i]->GetPhy ()->SetMobility (senderMobility[i]);
 	}
+
+// -------------------------------------- //
   LrWpanSpectrumValueHelper svh;
   Ptr<SpectrumValue> psd[nSenders+1];
 	for(int i = 0; i < nSenders+1; i++)
@@ -134,28 +135,18 @@ int main (int argc, char *argv[])
  		net_dev[i]->GetPhy ()->SetTxPowerSpectralDensity (psd[i]);
 	}
 
-//  dev0->GetPhy ()->SetTxPowerSpectralDensity (psd);
+// -------------------------------------- //
+	McpsDataIndicationCallback cbe;
+	cbe = MakeCallback (&LrWpanErrorDistanceCallback);
+	net_dev[0]->GetMac ()->SetMcpsDataIndicationCallback (cbe);
 
-//	McpsDataConfirmCallback cbc[nSenders + 1];
-//	McpsDataIndicationCallback cbi[nSenders + 1];
-	McpsDataIndicationCallback cbe[nSenders + 1];
-	cbe[1] = MakeCallback (&LrWpanErrorDistanceCallback);
-	net_dev[0]->GetMac ()->SetMcpsDataIndicationCallback (cbe[1]);
+// -------------------------------------- //
+	// Destination: Node 0
+	int i = 0, j = 0;
+	char* dstMacAddress = new char[to_string(i).length() + to_string(j).length()];
+	sprintf(dstMacAddress, "%02X:%02X", i, j);
 
-//	for(int i = 0; i < nSenders + 1; i++)
-//	{
-		//sender = i;
-//  	cbc[i] = MakeCallback (&DataConfirm);
-//  	net_dev[i]->GetMac ()->SetMcpsDataConfirmCallback (cbc[i]);
-//		cbe[i] = MakeCallback (&LrWpanErrorDistanceCallback);
-//  	net_dev[i]->GetMac ()->SetMcpsDataIndicationCallback (cbe[i]);
-//  	cbi[i] = MakeCallback (&DataIndication);
-//  	net_dev[i]->GetMac ()->SetMcpsDataIndicationCallback (cbi[i]);
-//	}
-//  McpsDataIndicationCallback cb0;
-//  cb0 = MakeCallback (&LrWpanErrorDistanceCallback);
-//  dev1->GetMac ()->SetMcpsDataIndicationCallback (cb0);
-
+// -------------------------------------- //
   McpsDataRequestParams params;
   params.m_srcAddrMode = SHORT_ADDR;
   params.m_dstAddrMode = SHORT_ADDR;
@@ -164,34 +155,11 @@ int main (int argc, char *argv[])
   params.m_msduHandle = 0;
   params.m_txOptions = 0;
 
-//	McpsDataRequestParams params[nSenders+1];
-//// Destination setting to Node 0
-//	int i = 0, j = 0;
-//	char* dstMacAddress = new char[to_string(i).length() + to_string(j).length()];
-//	sprintf(dstMacAddress, "%02X:%02X", i, j);
-	
-//  for(int i = 0 ; i < nSenders; i++)
-//	{
-//      params[i].m_srcAddrMode = SHORT_ADDR;
-//		params[i].m_dstPanId = 0;
-//      params[i].m_dstAddrMode = SHORT_ADDR;
-//      params[i].m_dstAddr = Mac16Address ("00:00");
-//  	params[i].m_msduHandle = 0;
-//  	params[i].m_txOptions = 0;//TX_OPTION_ACK;
-//	}
-//  McpsDataRequestParams params;
-//  params.m_srcAddrMode = SHORT_ADDR;
-//  params.m_dstAddrMode = SHORT_ADDR;
-//  params.m_dstPanId = 0;
-//  params.m_dstAddr = Mac16Address ("00:00");
-//  params.m_msduHandle = 0;
-//  params.m_txOptions = 0;
-
+// -------------------------------------- //
   Ptr<Packet> p1;
 	for(int i = 1; i < nSenders + 1; i++)
 	{
 		sender = 0;
-		cout << "I: " << i << endl;
 	 	for(int j = 0; j < 2; j++)
 		{
 			p1 = Create<Packet> (packetSize);
@@ -201,30 +169,8 @@ int main (int argc, char *argv[])
 		}
 	}
 
-  	Simulator::Run ();
-		NS_LOG_UNCOND(g_received[0] << " received");
-//  mob0->SetPosition (Vector (0,0,0));
-//  mob1->SetPosition (Vector (minDistance,0,0));
-//  for (int j = minDistance; j < maxDistance;  )
-//    {
-//      for (int i = 0; i < maxPackets; i++)
-//        {
-//          p = Create<Packet> (packetSize);
-//          Simulator::Schedule (Seconds (i),
-//                               &LrWpanMac::McpsDataRequest,
-//                               dev0->GetMac (), params, p);
-//        }
-//      Simulator::Run ();
-//      NS_LOG_UNCOND ("Received " << g_received << " packets for distance " << j);
-//      psrdataset.Add (j, g_received / 1000.0);
-//			cout << "Test: " << g_received << endl;
-//      g_received = 0;
-//			if (j == 1)
-//				break;
-//      j += increment;
-//      mob1->SetPosition (Vector (j,0,0));
-//    }
-//
+  Simulator::Run ();
+	NS_LOG_UNCOND(g_received[0] << " received");
   Simulator::Destroy ();
   return 0;
 }
