@@ -90,7 +90,7 @@ static void StateChangeNotification (std::string context, Time now, LrWpanPhyEnu
                          << " to " << LrWpanHelper::LrWpanPhyEnumerationPrinter (newState));
 }
 
-static void plotSendersPosition(int x[], int y[], int z[])
+static void plotSendersPosition(int x[], int y[], int z[], int nSenders)
 {
 string fileNameWithNoExtension = "plot-3d";
 string graphicsFileName        = fileNameWithNoExtension + ".png";
@@ -127,16 +127,10 @@ plot.AppendExtra ("set zrange [0:+200]");
 Gnuplot3dDataset dataset;
 dataset.SetTitle (dataTitle);
 dataset.SetStyle ("with lines");
-for(size_t i = 0; i < sizeof(x)/sizeof(x[0]); i++)
+for(int i = 0; i < nSenders + 1; i++)
 {
-	for(size_t j = 0; j < sizeof(y)/sizeof(y[0]); j++)
-	{
-		for(size_t k = 0; k < sizeof(z)/sizeof(z[0]); k++)
-		{
-			dataset.Add (x[i], y[j], z[k]);
-			dataset.AddEmptyLine ();
-		}
-	}
+	dataset.Add (x[i], y[i], z[i]);
+	dataset.AddEmptyLine ();
 }
 #pragma GCC diagnostic pop
 
@@ -153,28 +147,6 @@ plot.GenerateOutput (plotFile);
 plotFile.close ();
 }
 
-void static plotErrorDistance(int i, std::ostringstream& os, std::ofstream& berfile, Gnuplot psrplot, Gnuplot2dDataset psrdataset, int mP, uint32_t g_Received)
-{
-		NS_LOG_UNCOND ("Received " << g_Received << " packets for sender " << i);
-
-		double maxPackets = 1.0 * mP;
-		psrdataset.Add(i, g_Received / maxPackets);
-		g_Received = 0;
-	  
-		psrplot.AddDataset (psrdataset);
- 
-//   	psrplot.SetTitle (os.str ());
-//   	psrplot.SetTerminal ("postscript eps color enh \"Times-BoldItalic\"");
-//   	psrplot.SetLegend ("distance (m)", "Packet Success Rate (PSR)");
-//   	psrplot.SetExtra  ("set xrange [0:200]\n\
-// 	 	set yrange [0:1]\n\
-//		set grid\n\
-// 		set style line 1 linewidth 5\n\
-// 		set style increment user");
-//   	psrplot.GenerateOutput (berfile);
-//   	berfile.close ();	
-}
-
 int main (int argc, char *argv[])
 {
   std::ostringstream os;
@@ -185,7 +157,6 @@ int main (int argc, char *argv[])
 	int maxDistance = 100;	// meters
 	int minDistance = 1;		// meters
 	int packetSize = 50;
-	int maxPackets = 10;
 	double txPower = 0;
 	uint32_t channelNumber = 11;
 	
@@ -259,7 +230,7 @@ int main (int argc, char *argv[])
   Ptr<LogDistancePropagationLossModel> propModel = CreateObject<LogDistancePropagationLossModel> ();
   Ptr<ConstantSpeedPropagationDelayModel> delayModel = CreateObject<ConstantSpeedPropagationDelayModel> ();
   channel->AddPropagationLossModel (propModel);
-  //channel->SetPropagationDelayModel (delayModel);
+  channel->SetPropagationDelayModel (delayModel);
 
 	for(int i = 0 ; i < nSenders + 1; i++)
 	{	
@@ -275,7 +246,7 @@ int main (int argc, char *argv[])
 	for(int i = 0; i < nSenders + 1; i++)
 	{
 		std::string phy = "phy" + std::to_string(i);
-  	//net_dev[i]->GetPhy ()->TraceConnect ("TrxState", std::string (phy), MakeCallback (&StateChangeNotification));
+  	net_dev[i]->GetPhy ()->TraceConnect ("TrxState", std::string (phy), MakeCallback (&StateChangeNotification));
   }
 	// Set sender mobilities
 	Ptr<ConstantPositionMobilityModel> senderMobility[nSenders + 1];
@@ -300,7 +271,7 @@ int main (int argc, char *argv[])
  			psd[i] = svh.CreateTxPowerSpectralDensity (txPower, channelNumber);
    		net_dev[i]->GetPhy ()->SetTxPowerSpectralDensity (psd[i]);
 		}
-
+	plotSendersPosition(x, y, z, nSenders);
 
 	McpsDataConfirmCallback cbc[nSenders + 1];
 	McpsDataIndicationCallback cbi[nSenders + 1];
@@ -332,7 +303,6 @@ int main (int argc, char *argv[])
 	}
 	
 	McpsDataRequestParams params[nSenders];
-	McpsDataConfirmParams params1[nSenders];
 	for(int i = 0; i < nSenders; i++)
 	{
 		params[i].m_dstPanId = 0;
@@ -356,7 +326,6 @@ int main (int argc, char *argv[])
   	else
  		{
 			// Not supported
-
 			// params0.m_srcAddrMode = EXT_ADDR;
       // params0.m_dstAddrMode = EXT_ADDR;
       // params0.m_dstExtAddr = Mac64Address ("00:00:00:00:00:00:00:02");
@@ -367,7 +336,6 @@ int main (int argc, char *argv[])
 //  dev0->GetMac ()->McpsDataRequest (params, p0);
 
   Ptr<Packet> p1;
-  //uint32_t g_received[nSenders] = {0};
 	for(int i = 1; i < nSenders + 1; i++)
 	{
 		sender = i;
@@ -379,12 +347,8 @@ int main (int argc, char *argv[])
                                   net_dev[i]->GetMac (), params[i-1], p1);
 		}
   	Simulator::Run ();
-		NS_LOG_UNCOND(g_received << " received");
-//		plotErrorDistance(i, os, berfile, psrplot, psrdataset, maxPackets, g_received[i-1]);
-		
 	}
-//	Simulator::Run();
-//	system("gnuplot plot-3d.plt");
+	system("gnuplot plot-3d.plt");
   Simulator::Destroy ();
   return 0;
 }

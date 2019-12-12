@@ -75,6 +75,10 @@ int main (int argc, char *argv[])
   cmd.AddValue ("txPower", "transmit power (dBm)", txPower);
   cmd.AddValue ("packetSize", "packet (MSDU) size (bytes)", packetSize);
   cmd.AddValue ("channelNumber", "channel number", channelNumber);
+	cmd.AddValue ("nSenders", "number of senders", nSenders);
+	cmd.AddValue ("maxDistance", "maximum distance between sender and receiver (in meters)", maxDistance);
+	cmd.AddValue ("minDistance", "minimum distance between sender and receiver (in meters)", minDistance);
+	cmd.AddValue ("packetSize", "size of packet to be sent", packetSize);
 
   cmd.Parse (argc, argv);
 
@@ -193,9 +197,9 @@ int main (int argc, char *argv[])
 	NS_LOG_UNCOND("Packet Loss: " << packetLoss << "%");
 
 // -------------------------------------- //
+	//plotSendersPositions3DSpace();
 	plotPacketSuccessRate(i, g_received, maxPackets, nSenders, psrplot, psrdataset);
   system("gnuplot 802.15.4-psr-distance.plt");
 	Simulator::Destroy ();
   return 0;
 }
-
