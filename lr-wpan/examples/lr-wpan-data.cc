@@ -149,12 +149,10 @@ plotFile.close ();
 
 int main (int argc, char *argv[])
 {
-  std::ostringstream os;
-  std::ofstream berfile ("802.15.4-psr-distance.plt");
   bool verbose = false;
   bool extended = false;
 	int nSenders = 5;
-	int maxDistance = 100;	// meters
+	int maxDistance = 200;	// meters
 	int minDistance = 1;		// meters
 	int packetSize = 50;
 	double txPower = 0;
@@ -170,10 +168,6 @@ int main (int argc, char *argv[])
 	cmd.AddValue ("channelNumber", "channel number", channelNumber);
 
   cmd.Parse (argc, argv);
-	
-	os << "Packet (MSDU) size = " << packetSize << " bytes; tx power = " << txPower << " dBm; channel = " << channelNumber;
-	Gnuplot psrplot = Gnuplot ("802.15.4-psr-distance.eps");
-	Gnuplot2dDataset psrdataset ("802.15.4-psr-distance");
 	
 	Time::SetResolution (Time::NS);
 

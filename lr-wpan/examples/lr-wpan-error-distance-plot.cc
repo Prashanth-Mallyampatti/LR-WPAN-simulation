@@ -20,6 +20,7 @@
 #include <ns3/abort.h>
 #include <ns3/command-line.h>
 #include <ns3/gnuplot.h>
+#include <bits/stdc++.h>
 
 #include <fstream>
 #include <iostream>
@@ -56,6 +57,63 @@ static void plotPacketSuccessRate(int sender, int g_received, int maxPackets, in
   berfile.close ();
 }
 
+static void plotSendersPosition(int x[], int y[], int z[], int nSenders)
+{
+	string fileNameWithNoExtension = "plot-3d-senderPosition";
+	string graphicsFileName        = fileNameWithNoExtension + ".png";
+	string plotFileName            = fileNameWithNoExtension + ".plt";
+	string plotTitle               = "3-D Plot";
+	string dataTitle               = "3-D Data";
+	// Instantiate the plot and set its title.
+	Gnuplot plot (graphicsFileName);
+	plot.SetTitle (plotTitle);
+	
+	// Make the graphics file, which the plot file will create when it
+	// is used with Gnuplot, be a PNG file.
+	plot.SetTerminal ("png");
+	
+	// Rotate the plot 30 degrees around the x axis and then rotate the
+	// plot 120 degrees around the new z axis.
+	plot.AppendExtra ("set view 30, 120, 1.0, 1.0");
+	
+	// Make the zero for the z-axis be in the x-axis and y-axis plane.
+	plot.AppendExtra ("set ticslevel 0");
+	
+	// Set the labels for each axis.
+	plot.AppendExtra ("set xlabel 'X Values'");
+	plot.AppendExtra ("set ylabel 'Y Values'");
+	plot.AppendExtra ("set zlabel 'Z Values'");
+	
+	// Set the ranges for the x and y axis.
+	plot.AppendExtra ("set xrange [0:+200]");
+	plot.AppendExtra ("set yrange [0:+200]");
+	plot.AppendExtra ("set zrange [0:+200]");
+	
+	// Instantiate the dataset, set its title, and make the points be
+	// connected by lines.
+	Gnuplot3dDataset dataset;
+	dataset.SetTitle (dataTitle);
+	dataset.SetStyle ("with lines");
+	for(int i = 0; i < nSenders + 1; i++)
+	{
+		dataset.Add (x[i], y[i], z[i]);
+		dataset.AddEmptyLine ();
+	}
+	#pragma GCC diagnostic pop
+	
+	// Add the dataset to the plot.
+	plot.AddDataset (dataset);
+	
+	// Open the plot file.
+	ofstream plotFile (plotFileName.c_str());
+	
+	// Write the plot file.
+	plot.GenerateOutput (plotFile);
+	
+	// Close the plot file.
+	plotFile.close ();
+}
+
 int main (int argc, char *argv[])
 {
   std::ostringstream os;
@@ -68,7 +126,7 @@ int main (int argc, char *argv[])
   int packetSize = 20;		// bytes
   double txPower = 0;
   uint32_t channelNumber = 11;
-	int nSenders = 50;
+	int nSenders = 5;
 
   CommandLine cmd;
 
@@ -197,9 +255,10 @@ int main (int argc, char *argv[])
 	NS_LOG_UNCOND("Packet Loss: " << packetLoss << "%");
 
 // -------------------------------------- //
-	//plotSendersPositions3DSpace();
+	plotSendersPosition(x, y, z, nSenders);
 	plotPacketSuccessRate(i, g_received, maxPackets, nSenders, psrplot, psrdataset);
   system("gnuplot 802.15.4-psr-distance.plt");
+  system("gnuplot plot-3d-senderPosition.plt");
 	Simulator::Destroy ();
   return 0;
 }
