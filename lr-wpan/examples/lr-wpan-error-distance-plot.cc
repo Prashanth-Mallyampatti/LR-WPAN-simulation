@@ -21,6 +21,7 @@
 #include <ns3/command-line.h>
 #include <ns3/gnuplot.h>
 #include <bits/stdc++.h>
+#include <ctime>
 
 #include <fstream>
 #include <iostream>
@@ -57,6 +58,7 @@ static void plotPacketSuccessRate(int sender, int g_received, int maxPackets, in
   berfile.close ();
 }
 
+/*
 static void plotSendersPosition(int x[], int y[], int z[], int nSenders)
 {
 	string fileNameWithNoExtension = "plot-3d-senderPosition";
@@ -113,9 +115,11 @@ static void plotSendersPosition(int x[], int y[], int z[], int nSenders)
 	// Close the plot file.
 	plotFile.close ();
 }
+*/
 
 int main (int argc, char *argv[])
 {
+	srand ( time(NULL) );
   std::ostringstream os;
   Gnuplot psrplot = Gnuplot ("802.15.4-psr-distance.eps");
   Gnuplot2dDataset psrdataset ("802.15.4-psr-vs-distance");
@@ -136,7 +140,7 @@ int main (int argc, char *argv[])
 	cmd.AddValue ("nSenders", "number of senders", nSenders);
 	cmd.AddValue ("maxDistance", "maximum distance between sender and receiver (in meters)", maxDistance);
 	cmd.AddValue ("minDistance", "minimum distance between sender and receiver (in meters)", minDistance);
-	cmd.AddValue ("packetSize", "size of packet to be sent", packetSize);
+	cmd.AddValue ("maxPackets", "max packets to be sent for each sender", maxPackets);
 
   cmd.Parse (argc, argv);
 
@@ -188,16 +192,21 @@ int main (int argc, char *argv[])
 // -------------------------------------- //
 	Ptr<ConstantPositionMobilityModel> senderMobility[nSenders + 1];
 	int x[nSenders + 1];
-	int y[nSenders + 1];
-	int z[nSenders + 1];
-	for(int i = 0; i < nSenders + 1; i++)
+	//int y[nSenders + 1];
+	//int z[nSenders + 1];
+	
+	senderMobility[0] = CreateObject<ConstantPositionMobilityModel> ();
+	senderMobility[0]->SetPosition (Vector (0, 0, 0));
+	net_dev[0]->GetPhy ()->SetMobility (senderMobility[0]);
+
+	for(int i = 1; i < nSenders + 1; i++)
 	{
 		senderMobility[i] = CreateObject<ConstantPositionMobilityModel> ();
 		x[i] = rand() % maxDistance + minDistance;
-		y[i] = rand() % maxDistance + minDistance;
-		z[i] = rand() % maxDistance + minDistance;
-  	
-		senderMobility[i]->SetPosition (Vector (x[i], y[i], z[i]));
+		//y[i] = rand() % maxDistance + minDistance;
+		//z[i] = rand() % maxDistance + minDistance;
+  
+		senderMobility[i]->SetPosition (Vector (x[i], 0, 0));
    	net_dev[i]->GetPhy ()->SetMobility (senderMobility[i]);
 	}
 
@@ -244,7 +253,7 @@ int main (int argc, char *argv[])
 		}
 		last_g_received = g_received;
     Simulator::Run ();
-		psrdataset.Add (i, (g_received - last_g_received) / (1.0 * maxPackets));
+		psrdataset.Add (x[i], (g_received - last_g_received) / (1.0 * maxPackets));
 	}
 
 // -------------------------------------- //
@@ -255,7 +264,7 @@ int main (int argc, char *argv[])
 	NS_LOG_UNCOND("Packet Loss: " << packetLoss << "%");
 
 // -------------------------------------- //
-	plotSendersPosition(x, y, z, nSenders);
+	//plotSendersPosition(x, y, z, nSenders);
 	plotPacketSuccessRate(i, g_received, maxPackets, nSenders, psrplot, psrdataset);
   system("gnuplot 802.15.4-psr-distance.plt");
   system("gnuplot plot-3d-senderPosition.plt");

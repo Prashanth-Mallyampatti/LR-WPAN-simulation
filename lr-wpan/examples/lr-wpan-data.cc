@@ -1,30 +1,3 @@
-/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
-/*
- * Copyright (c) 2011 The Boeing Company
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation;
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * Author:  Tom Henderson <thomas.r.henderson@boeing.com>
- */
-
-/*
- * Try to send data end-to-end through a LrWpanMac <-> LrWpanPhy <->
- * SpectrumChannel <-> LrWpanPhy <-> LrWpanMac chain
- *
- * Trace Phy state changes, and Mac DataIndication and DataConfirm events
- * to stdout
- */
 #include <ns3/log.h>
 #include <ns3/core-module.h>
 #include <ns3/lr-wpan-module.h>
@@ -37,7 +10,6 @@
 
 #include <iostream>
 #include <string>
-
 
 #include <ns3/test.h>
 #include <ns3/callback.h>
@@ -118,9 +90,9 @@ plot.AppendExtra ("set ylabel 'Y Values'");
 plot.AppendExtra ("set zlabel 'Z Values'");
 
 // Set the ranges for the x and y axis.
-plot.AppendExtra ("set xrange [0:+200]");
-plot.AppendExtra ("set yrange [0:+200]");
-plot.AppendExtra ("set zrange [0:+200]");
+plot.AppendExtra ("set xrange [0:+100]");
+plot.AppendExtra ("set yrange [0:+100]");
+plot.AppendExtra ("set zrange [0:+100]");
 
 // Instantiate the dataset, set its title, and make the points be
 // connected by lines.
@@ -152,7 +124,7 @@ int main (int argc, char *argv[])
   bool verbose = false;
   bool extended = false;
 	int nSenders = 5;
-	int maxDistance = 200;	// meters
+	int maxDistance = 100;	// meters
 	int minDistance = 1;		// meters
 	int packetSize = 50;
 	double txPower = 0;
@@ -166,6 +138,8 @@ int main (int argc, char *argv[])
 	cmd.AddValue ("txPower", "transmit power (dbm)", txPower);
 	cmd.AddValue ("packetSize", "packet (MSDU) size (bytes)", packetSize);
 	cmd.AddValue ("channelNumber", "channel number", channelNumber);
+	cmd.AddValue ("minDistance", "minimum distance between sender and receiver", minDistance);
+	cmd.AddValue ("maxDistance", "maximum distance between sender and receiver", maxDistance);
 
   cmd.Parse (argc, argv);
 	
@@ -325,7 +299,7 @@ int main (int argc, char *argv[])
       // params0.m_dstExtAddr = Mac64Address ("00:00:00:00:00:00:00:02");
     }
   	params[i].m_msduHandle = 0;
-  	params[i].m_txOptions = 0;//TX_OPTION_ACK;
+  	params[i].m_txOptions = TX_OPTION_ACK;
 	}
 //  dev0->GetMac ()->McpsDataRequest (params, p0);
 
