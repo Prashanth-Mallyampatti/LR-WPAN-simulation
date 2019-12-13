@@ -25,7 +25,7 @@ Following are the steps to install NS3 on Ubuntu 18.04:
       
 * *Execute the lr-wpan-data*:
 
-  1. `cd ns-allinone-3.29/ns-3.29`>br/>
+  1. `cd ns-allinone-3.29/ns-3.29`<br/>
       This is where `waf` would be run to build the scripts. `scratch/` folder can be used to play around with modules and build new ones.
   2. Copy the repository folder to the NS3 folders: <br/>
       `cp -r LR-WPAN-simulation/lr-wpan LR-WPAN-simulation/ns-allinone-3.29/ns-3.29/src/lr-wpan`
@@ -37,4 +37,15 @@ Following are the steps to install NS3 on Ubuntu 18.04:
   4. Trace files- PCAPs and ASCII placed in:<br/>
       `LR-WPAN-simulation/ns-allinone-3.29/ns-3.29/LR-wpan-trace/` directory.
   5. Plot files placed in:<br/>
+      `LR-WPAN-simulation/ns-allinone-3.29/ns-3.29/` directory.
+ 
+* *Execute the lr-wpan-error-distance-plot*:
+  
+  1. `cd ns-allinone-3.29/ns-3.29`<br/>
+  2. Run the `lr-wpan-error-distance-plot` code using the follwowing command in `LR-WPAN-simulation/ns-allinone-3.29/ns-3.29/` directory:<br/>
+      `./waf --run "src/lr-wpan/examples/lr-wpan-error-distance-plot"`
+      <br/><br/>
+      Example to run with command line arguments:<br/>
+      `./waf --run "src/lr-wpan/examples/lr-wpan-error-distance-plot --nSenders=5"`
+  3. Plot files placed in:<br/>
       `LR-WPAN-simulation/ns-allinone-3.29/ns-3.29/` directory.
